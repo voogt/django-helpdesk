@@ -845,6 +845,10 @@ class Ticket(models.Model):
                 ticketcc = self.ticketcc_set.create(email=email)
             return ticketcc
 
+    def get_assign_to_list(self):
+        """ Return assign to list for the ticket """
+        return settings.AUTH_USER_MODEL.objects.all()
+
 
 class FollowUpManager(models.Manager):
 

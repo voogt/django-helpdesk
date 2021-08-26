@@ -97,7 +97,7 @@ class EditTicketForm(CustomFieldMixin, forms.ModelForm):
 
     class Meta:
         model = Ticket
-        exclude = ('created', 'modified', 'status', 'on_hold', 'resolution', 'last_escalation', 'assigned_to')
+        exclude = ('created', 'modified', 'status', 'on_hold', 'resolution', 'last_escalation', 'secret_key', 'kbitem')
 
     class Media:
         js = ('helpdesk/js/init_due_date.js', 'helpdesk/js/init_datetime_classes.js')
@@ -107,6 +107,8 @@ class EditTicketForm(CustomFieldMixin, forms.ModelForm):
         Add any custom fields that are defined to the form
         """
         super(EditTicketForm, self).__init__(*args, **kwargs)
+
+        self.fields['assigned_to'].choices = [(x.pk, x) for x in self.instance.get_assign_to_list()]
 
         # Disable and add help_text to the merged_to field on this form
         self.fields['merged_to'].disabled = True
