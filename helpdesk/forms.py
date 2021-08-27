@@ -94,7 +94,6 @@ class CustomFieldMixin(object):
 
 
 class EditTicketForm(CustomFieldMixin, forms.ModelForm):
-
     class Meta:
         model = Ticket
         exclude = ('created', 'modified', 'status', 'on_hold', 'resolution', 'last_escalation', 'secret_key', 'kbitem')
@@ -168,7 +167,6 @@ class EditTicketForm(CustomFieldMixin, forms.ModelForm):
 
 
 class EditFollowUpForm(forms.ModelForm):
-
     class Meta:
         model = FollowUp
         exclude = ('date', 'user',)
@@ -270,7 +268,7 @@ class AbstractTicketForm(CustomFieldMixin, forms.Form):
             title=self.cleaned_data['title'],
             submitter_email=self.cleaned_data['submitter_email'],
             created=timezone.now(),
-            status=Ticket.OPEN_STATUS,
+            status=Ticket.NEW_STATUS,
             queue=queue,
             description=self.cleaned_data['body'],
             priority=self.cleaned_data.get(
@@ -490,14 +488,12 @@ class PublicTicketForm(AbstractTicketForm):
 
 
 class UserSettingsForm(forms.ModelForm):
-
     class Meta:
         model = UserSettings
         exclude = ['user', 'settings_pickled']
 
 
 class EmailIgnoreForm(forms.ModelForm):
-
     class Meta:
         model = IgnoreEmail
         exclude = []
