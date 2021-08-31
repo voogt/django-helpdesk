@@ -791,7 +791,7 @@ class Ticket(models.Model):
         return reverse('helpdesk:view', args=(self.id,))
 
     def save(self, *args, **kwargs):
-        if not self.id:
+        if not self.id and not self.created:
             # This is a new ticket as no ID yet exists.
             self.created = timezone.now()
 
