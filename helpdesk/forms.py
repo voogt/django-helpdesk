@@ -212,6 +212,13 @@ class AbstractTicketForm(CustomFieldMixin, forms.Form):
         help_text=_("Please select a priority carefully. If unsure, leave it as '3'."),
     )
 
+    start_date = forms.DateTimeField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off'}),
+        required=False,
+        input_formats=[CUSTOMFIELD_DATE_FORMAT, CUSTOMFIELD_DATETIME_FORMAT, '%d/%m/%Y', '%m/%d/%Y', "%d.%m.%Y"],
+        label=_('Start on'),
+    )
+
     due_date = forms.DateTimeField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off'}),
         required=False,
@@ -279,6 +286,7 @@ class AbstractTicketForm(CustomFieldMixin, forms.Form):
                 'due_date',
                 getattr(settings, "HELPDESK_PUBLIC_TICKET_DUE_DATE", None)
             ) or None,
+            start_date=self.cleaned_data.get('start_date', None),
             kbitem=kbitem,
         )
 

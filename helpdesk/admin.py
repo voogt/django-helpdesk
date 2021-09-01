@@ -20,12 +20,18 @@ class QueueAdmin(admin.ModelAdmin):
             return "-"
 
 
+def generate_start_date(modeladmin, request, queryset):
+    for ticket in queryset:
+        ticket.save()
+
+
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
     list_display = ('title', 'status', 'assigned_to', 'queue',
-                    'hidden_submitter_email', 'time_spent')
+                    'hidden_submitter_email', 'start_date', 'time_spent')
     date_hierarchy = 'created'
     list_filter = ('queue', 'assigned_to', 'status')
+    actions = (generate_start_date,)
 
     def hidden_submitter_email(self, ticket):
         if ticket.submitter_email:
@@ -35,6 +41,7 @@ class TicketAdmin(admin.ModelAdmin):
             return "%s@%s" % (username, domain)
         else:
             return ticket.submitter_email
+
     hidden_submitter_email.short_description = _('Submitter E-Mail')
 
     def time_spent(self, ticket):
@@ -65,6 +72,7 @@ class FollowUpAdmin(admin.ModelAdmin):
 
     def ticket_get_ticket_for_url(self, obj):
         return obj.ticket.ticket_for_url
+
     ticket_get_ticket_for_url.short_description = _('Slug')
 
 
@@ -85,7 +93,7 @@ class CustomFieldAdmin(admin.ModelAdmin):
 @admin.register(EmailTemplate)
 class EmailTemplateAdmin(admin.ModelAdmin):
     list_display = ('template_name', 'heading', 'locale')
-    list_filter = ('locale', )
+    list_filter = ('locale',)
 
 
 @admin.register(IgnoreEmail)

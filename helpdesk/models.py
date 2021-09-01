@@ -545,6 +545,12 @@ class Ticket(models.Model):
         help_text=_('1 = Highest Priority, 5 = Low Priority'),
     )
 
+    start_date = models.DateTimeField(
+        _('Start date'),
+        blank=True,
+        null=True,
+    )
+
     due_date = models.DateTimeField(
         _('Due on'),
         blank=True,
@@ -797,6 +803,12 @@ class Ticket(models.Model):
 
         if not self.priority:
             self.priority = 3
+
+        if not self.start_date:
+            if self.due_date:
+                self.start_date = self.due_date
+            else:
+                self.start_date = self.created
 
         self.modified = timezone.now()
 
