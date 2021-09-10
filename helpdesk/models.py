@@ -36,7 +36,7 @@ from .templated_email import send_templated_mail
 
 def format_time_spent(time_spent):
     if time_spent:
-        hour = time_spent.seconds // 3600
+        hour = (time_spent.days * 24) + (time_spent.seconds // 3600)
         minute = time_spent.seconds % 3600 // 60
 
         time_spent = "{0:02d}h:{1:02d}m".format(hour, minute)
@@ -557,6 +557,11 @@ class Ticket(models.Model):
         null=True,
     )
 
+    expected_time = models.DurationField(
+        help_text=_("Expected time to complete task"),
+        blank=True, null=True
+    )
+
     last_escalation = models.DateTimeField(
         blank=True,
         null=True,
@@ -602,6 +607,10 @@ class Ticket(models.Model):
     @property
     def time_spent_formated(self):
         return format_time_spent(self.time_spent)
+
+    @property
+    def expected_time_formated(self):
+        return format_time_spent(self.expected_time)
 
     def send(self, roles, dont_send_to=None, **kwargs):
         """

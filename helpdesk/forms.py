@@ -225,6 +225,11 @@ class AbstractTicketForm(CustomFieldMixin, forms.Form):
         input_formats=[CUSTOMFIELD_DATE_FORMAT, CUSTOMFIELD_DATETIME_FORMAT, '%d/%m/%Y', '%m/%d/%Y', "%d.%m.%Y"],
         label=_('Due on'),
     )
+    expected_time = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off'}),
+        required=False,
+        label=_('Expected time to complete task'),
+    )
 
     attachment = forms.FileField(
         widget=forms.FileInput(attrs={'class': 'form-control-file'}),
@@ -287,6 +292,7 @@ class AbstractTicketForm(CustomFieldMixin, forms.Form):
                 getattr(settings, "HELPDESK_PUBLIC_TICKET_DUE_DATE", None)
             ) or None,
             start_date=self.cleaned_data.get('start_date', None),
+            expected_time=self.cleaned_data.get('expected_time', None),
             kbitem=kbitem,
         )
 
