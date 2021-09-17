@@ -276,6 +276,7 @@ class AbstractTicketForm(CustomFieldMixin, forms.Form):
         if 'kbitem' in self.cleaned_data:
             kbitem = KBItem.objects.get(id=int(self.cleaned_data['kbitem']))
 
+        expected_time = self.cleaned_data.get('expected_time', None)
         ticket = Ticket(
             title=self.cleaned_data['title'],
             submitter_email=self.cleaned_data['submitter_email'],
@@ -292,7 +293,7 @@ class AbstractTicketForm(CustomFieldMixin, forms.Form):
                 getattr(settings, "HELPDESK_PUBLIC_TICKET_DUE_DATE", None)
             ) or None,
             start_date=self.cleaned_data.get('start_date', None),
-            expected_time=self.cleaned_data.get('expected_time', None),
+            expected_time=expected_time if expected_time else None,
             kbitem=kbitem,
         )
 
