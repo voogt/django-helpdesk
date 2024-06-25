@@ -26,7 +26,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
 from django.utils import encoding, timezone
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from email_reply_parser import EmailReplyParser
 
 from helpdesk import settings
