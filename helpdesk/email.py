@@ -532,9 +532,9 @@ def object_from_message(message, queue, logger):
                 logger.debug("Discovered plain text MIME part")
             else:
                 try:
-                    email_body = encoding.smart_text(part.get_payload(decode=True))
+                    email_body = encoding.smart_str(part.get_payload(decode=True))
                 except UnicodeDecodeError:
-                    email_body = encoding.smart_text(part.get_payload(decode=False))
+                    email_body = encoding.smart_str(part.get_payload(decode=False))
 
                 payload = """
 <html>
