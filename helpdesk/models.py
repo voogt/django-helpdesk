@@ -547,6 +547,12 @@ class Ticket(models.Model):
         null=True,
     )
 
+    start_date = models.DateTimeField(
+        _('Start on'),
+        blank=True,
+        null=True,
+    )
+
     last_escalation = models.DateTimeField(
         blank=True,
         null=True,
