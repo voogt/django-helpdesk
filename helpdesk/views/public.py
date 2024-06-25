@@ -14,7 +14,7 @@ from django.core.exceptions import (
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
-from django.utils.http import urlquote
+from urllib.parse import quote as urlquote
 from django.utils.translation import gettext as _
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_exempt
