@@ -14,7 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, gettext as ugettext
 from io import StringIO
 import re
 import os
@@ -27,7 +27,6 @@ from markdown.extensions import Extension
 
 import pinax.teams.models
 
-
 import uuid
 
 from helpdesk import settings as helpdesk_settings
@@ -37,10 +36,10 @@ from .templated_email import send_templated_mail
 
 def format_time_spent(time_spent):
     if time_spent:
-        time_spent = "{0:02d}h:{1:02d}m".format(
-            time_spent.seconds // 3600,
-            time_spent.seconds // 60
-        )
+        hour = (time_spent.days * 24) + (time_spent.seconds // 3600)
+        minute = time_spent.seconds % 3600 // 60
+
+        time_spent = "{0:02d}h:{1:02d}m".format(hour, minute)
     else:
         time_spent = ""
     return time_spent
@@ -348,6 +347,7 @@ class Queue(models.Model):
                 return u'NO QUEUE EMAIL ADDRESS DEFINED <%s>' % settings.DEFAULT_FROM_EMAIL
         else:
             return u'%s <%s>' % (self.title, self.email_address)
+
     from_address = property(_from_address)
 
     @property
@@ -444,26 +444,30 @@ class Ticket(models.Model):
     the dashboard to prompt users to take ownership of them.
     """
 
+    NEW_STATUS = 0
     OPEN_STATUS = 1
     REOPENED_STATUS = 2
     RESOLVED_STATUS = 3
     CLOSED_STATUS = 4
     DUPLICATE_STATUS = 5
+    REJECT_STATUS = 6
 
     STATUS_CHOICES = (
+        (NEW_STATUS, _('New')),
         (OPEN_STATUS, _('Open')),
         (REOPENED_STATUS, _('Reopened')),
         (RESOLVED_STATUS, _('Resolved')),
         (CLOSED_STATUS, _('Closed')),
         (DUPLICATE_STATUS, _('Duplicate')),
+        (REJECT_STATUS, _('Rejected')),
     )
 
     PRIORITY_CHOICES = (
-        (1, _('1. Critical')),
-        (2, _('2. High')),
-        (3, _('3. Normal')),
-        (4, _('4. Low')),
-        (5, _('5. Very Low')),
+        (1, _('Critical')),
+        (2, _('High')),
+        (3, _('Normal')),
+        (4, _('Low')),
+        (5, _('Very Low')),
     )
 
     title = models.CharField(
@@ -509,7 +513,7 @@ class Ticket(models.Model):
     status = models.IntegerField(
         _('Status'),
         choices=STATUS_CHOICES,
-        default=OPEN_STATUS,
+        default=NEW_STATUS,
     )
 
     on_hold = models.BooleanField(
@@ -541,16 +545,21 @@ class Ticket(models.Model):
         help_text=_('1 = Highest Priority, 5 = Low Priority'),
     )
 
+    start_date = models.DateTimeField(
+        _('Start date'),
+        blank=True,
+        null=True,
+    )
+
     due_date = models.DateTimeField(
         _('Due on'),
         blank=True,
         null=True,
     )
 
-    start_date = models.DateTimeField(
-        _('Start on'),
-        blank=True,
-        null=True,
+    expected_time = models.DurationField(
+        help_text=_("Expected time to complete task"),
+        blank=True, null=True
     )
 
     last_escalation = models.DateTimeField(
@@ -599,6 +608,10 @@ class Ticket(models.Model):
     def time_spent_formated(self):
         return format_time_spent(self.time_spent)
 
+    @property
+    def expected_time_formated(self):
+        return format_time_spent(self.expected_time)
+
     def send(self, roles, dont_send_to=None, **kwargs):
         """
         Send notifications to everyone interested in this ticket.
@@ -620,7 +633,7 @@ class Ticket(models.Model):
             'assigned_to': (template_name2, context),
         }
 
-        **kwargs are passed to send_templated_mail defined in templated_mail.py
+        **kwargs are passed to send_templated_mail defined in templated_email.py
 
         returns the set of email addresses the notification was delivered to.
 
@@ -640,6 +653,7 @@ class Ticket(models.Model):
                 template, context = roles[role]
                 send_templated_mail(template, context, recipient, sender=self.queue.from_address, **kwargs)
                 recipients.add(recipient)
+
         send('submitter', self.submitter_email)
         send('ticket_cc', self.queue.updated_ticket_cc)
         send('new_ticket_cc', self.queue.new_ticket_cc)
@@ -661,6 +675,7 @@ class Ticket(models.Model):
                 return self.assigned_to.get_full_name()
             else:
                 return self.assigned_to.get_username()
+
     get_assigned_to = property(_get_assigned_to)
 
     def _get_ticket(self):
@@ -668,11 +683,13 @@ class Ticket(models.Model):
         and queue slug. This is generally used in e-mail subjects. """
 
         return u"[%s]" % self.ticket_for_url
+
     ticket = property(_get_ticket)
 
     def _get_ticket_for_url(self):
         """ A URL-friendly ticket ID, used in links. """
         return u"%s-%s" % (self.queue.slug, self.id)
+
     ticket_for_url = property(_get_ticket_for_url)
 
     def _get_priority_css_class(self):
@@ -687,6 +704,7 @@ class Ticket(models.Model):
             return "success"
         else:
             return ""
+
     get_priority_css_class = property(_get_priority_css_class)
 
     def _get_status(self):
@@ -700,6 +718,7 @@ class Ticket(models.Model):
         if not self.can_be_resolved:
             dep_msg = _(' - Open dependencies')
         return u'%s%s%s' % (self.get_status_display(), held_msg, dep_msg)
+
     get_status = property(_get_status)
 
     def _get_ticket_url(self):
@@ -726,6 +745,7 @@ class Ticket(models.Model):
             self.submitter_email,
             self.secret_key
         )
+
     ticket_url = property(_get_ticket_url)
 
     def _get_staff_url(self):
@@ -750,6 +770,7 @@ class Ticket(models.Model):
             reverse('helpdesk:view',
                     args=[self.id])
         )
+
     staff_url = property(_get_staff_url)
 
     def _can_be_resolved(self):
@@ -761,6 +782,7 @@ class Ticket(models.Model):
         OPEN_STATUSES = (Ticket.OPEN_STATUS, Ticket.REOPENED_STATUS)
         return TicketDependency.objects.filter(ticket=self).filter(
             depends_on__status__in=OPEN_STATUSES).count() == 0
+
     can_be_resolved = property(_can_be_resolved)
 
     def get_submitter_userprofile(self):
@@ -784,12 +806,18 @@ class Ticket(models.Model):
         return reverse('helpdesk:view', args=(self.id,))
 
     def save(self, *args, **kwargs):
-        if not self.id:
+        if not self.id and not self.created:
             # This is a new ticket as no ID yet exists.
             self.created = timezone.now()
 
         if not self.priority:
             self.priority = 3
+
+        if not self.start_date:
+            if self.due_date:
+                self.start_date = self.due_date
+            else:
+                self.start_date = self.created
 
         self.modified = timezone.now()
 
@@ -849,6 +877,10 @@ class Ticket(models.Model):
             else:
                 ticketcc = self.ticketcc_set.create(email=email)
             return ticketcc
+
+    def get_assign_to_list(self):
+        """ Return assign to list for the ticket """
+        return settings.AUTH_USER_MODEL.objects.all()
 
 
 class FollowUpManager(models.Manager):
@@ -996,11 +1028,11 @@ class TicketChange(models.Model):
     def __str__(self):
         out = '%s ' % self.field
         if not self.new_value:
-            out += _('removed')
+            out += ugettext('removed')
         elif not self.old_value:
-            out += _('set to %s') % self.new_value
+            out += ugettext('set to %s') % self.new_value
         else:
-            out += _('changed from "%(old_value)s" to "%(new_value)s"') % {
+            out += ugettext('changed from "%(old_value)s" to "%(new_value)s"') % {
                 'old_value': self.old_value,
                 'new_value': self.new_value
             }
@@ -1086,7 +1118,6 @@ class Attachment(models.Model):
 
 
 class FollowUpAttachment(Attachment):
-
     followup = models.ForeignKey(
         FollowUp,
         on_delete=models.CASCADE,
@@ -1108,7 +1139,6 @@ class FollowUpAttachment(Attachment):
 
 
 class KBIAttachment(Attachment):
-
     kbitem = models.ForeignKey(
         "KBItem",
         on_delete=models.CASCADE,
@@ -1139,6 +1169,7 @@ class PreSetReply(models.Model):
     When replying to a ticket, the user can select any reply set for the current
     queue, and the body text is fetched via AJAX.
     """
+
     class Meta:
         ordering = ('name',)
         verbose_name = _('Pre-set reply')
@@ -1394,6 +1425,7 @@ class KBItem(models.Model):
             return (self.recommendations / self.votes) * 10
         else:
             return _('Unrated')
+
     score = property(_score)
 
     def __str__(self):
@@ -1522,7 +1554,10 @@ class UserSettings(models.Model):
 
     email_on_ticket_change = models.BooleanField(
         verbose_name=_('E-mail me on ticket change?'),
-        help_text=_('If you\'re the ticket owner and the ticket is changed via the web by somebody else, do you want to receive an e-mail?'),
+        help_text=_(
+            'If you\'re the ticket owner and the ticket is changed via the web by somebody else,'
+            'do you want to receive an e-mail?'
+        ),
         default=email_on_ticket_change_default,
     )
 
@@ -1578,6 +1613,7 @@ class IgnoreEmail(models.Model):
     processing IMAP and POP3 mailboxes, eg mails from postmaster or from
     known trouble-makers.
     """
+
     class Meta:
         verbose_name = _('Ignored e-mail address')
         verbose_name_plural = _('Ignored e-mail addresses')
@@ -1709,6 +1745,7 @@ class TicketCC(models.Model):
             return self.user.email
         else:
             return self.email
+
     email_address = property(_email_address)
 
     def _display(self):
@@ -1716,6 +1753,7 @@ class TicketCC(models.Model):
             return self.user
         else:
             return self.email
+
     display = property(_display)
 
     def __str__(self):
@@ -1819,6 +1857,7 @@ class CustomField(models.Model):
         choices = [[item.strip(), item.strip()] for item in valuebuffer.readlines()]
         valuebuffer.close()
         return choices
+
     choices_as_array = property(_choices_as_array)
 
     required = models.BooleanField(
@@ -1874,6 +1913,7 @@ class TicketDependency(models.Model):
     To help enforce this, a helper function `can_be_resolved` on each Ticket instance checks that
     these have all been resolved.
     """
+
     class Meta:
         unique_together = (('ticket', 'depends_on'),)
         verbose_name = _('Ticket dependency')

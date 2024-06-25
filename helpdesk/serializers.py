@@ -18,12 +18,12 @@ class DatatablesTicketSerializer(serializers.ModelSerializer):
     submitter = serializers.SerializerMethodField()
     created = serializers.SerializerMethodField()
     due_date = serializers.SerializerMethodField()
-    start_date = serializers.DateField()
     status = serializers.SerializerMethodField()
     row_class = serializers.SerializerMethodField()
     time_spent = serializers.SerializerMethodField()
     queue = serializers.SerializerMethodField()
     kbitem = serializers.SerializerMethodField()
+    start_date = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -46,6 +46,9 @@ class DatatablesTicketSerializer(serializers.ModelSerializer):
 
     def get_due_date(self, obj):
         return humanize.naturaltime(obj.due_date)
+
+    def get_start_date(self, obj):
+        return humanize.naturaltime(obj.start_date)
 
     def get_assigned_to(self, obj):
         if obj.assigned_to:
