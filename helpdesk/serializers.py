@@ -18,6 +18,7 @@ class DatatablesTicketSerializer(serializers.ModelSerializer):
     submitter = serializers.SerializerMethodField()
     created = serializers.SerializerMethodField()
     due_date = serializers.SerializerMethodField()
+    start_date = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     row_class = serializers.SerializerMethodField()
     time_spent = serializers.SerializerMethodField()
@@ -29,7 +30,7 @@ class DatatablesTicketSerializer(serializers.ModelSerializer):
         # fields = '__all__'
         fields = ('ticket', 'id', 'priority', 'title', 'queue', 'status',
                   'created', 'due_date', 'assigned_to', 'submitter', 'row_class',
-                  'time_spent', 'kbitem')
+                  'time_spent', 'kbitem', 'start_date')
 
     def get_queue(self, obj):
         return {"title": obj.queue.title, "id": obj.queue.id}
